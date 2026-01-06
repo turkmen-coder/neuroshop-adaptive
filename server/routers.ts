@@ -32,6 +32,33 @@ export const appRouter = router({
         const { updatePersonalityProfile } = await import('./db');
         return updatePersonalityProfile(ctx.user.id, { consentGiven: input.consentGiven });
       }),
+    
+    analyzeSearchQuery: protectedProcedure
+      .input(z.object({ query: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { analyzeTextForPersonality, mergePersonalityInsights } = await import('./gemini-analysis');
+        const { getOrCreatePersonalityProfile, updatePersonalityProfile } = await import('./db');
+        
+        // Analyze the search query
+        const insights = await analyzeTextForPersonality(input.query);
+        
+        // Get current profile
+        const currentProfile = await getOrCreatePersonalityProfile(ctx.user.id);
+        if (!currentProfile) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to get profile' });
+        }
+        
+        // Merge insights with existing profile
+        const merged = mergePersonalityInsights(currentProfile, insights, 0.2);
+        
+        // Update profile
+        await updatePersonalityProfile(ctx.user.id, merged);
+        
+        return {
+          insights,
+          updatedProfile: merged,
+        };
+      }),
   }),
 
   // Products

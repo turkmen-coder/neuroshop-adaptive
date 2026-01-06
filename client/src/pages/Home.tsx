@@ -26,11 +26,27 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
+  const analyzeQueryMutation = trpc.personality.analyzeSearchQuery.useMutation({
+    onSuccess: (data) => {
+      // Silently update profile in background
+      console.log('Search query analyzed:', data.insights);
+    },
+    onError: (error) => {
+      console.error('Failed to analyze query:', error);
+    },
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       addSearchTerm(searchQuery);
-      // TODO: Implement search functionality
+      
+      // Analyze search query with Gemini if user is authenticated
+      if (isAuthenticated && searchQuery.length > 3) {
+        analyzeQueryMutation.mutate({ query: searchQuery });
+      }
+      
+      // TODO: Implement actual search functionality
     }
   };
 

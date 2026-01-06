@@ -83,3 +83,24 @@
 - [ ] Environment variables yapılandırması
 - [ ] İlk checkpoint oluşturma
 - [ ] Dokümantasyon tamamlama
+
+## Gemini API Entegrasyonu (Yeni)
+- [x] Gemini API text analizi servisi oluşturma
+- [x] Arama sorgusu kişilik analizi endpoint'i
+- [x] Frontend'de arama sorgusu analizi entegrasyonu
+- [x] Kişilik profili otomatik güncelleme
+- [x] Test coverage ekleme
+
+## Google Shopping Ürün Ekleme (Yeni)
+- [x] Statik veri ile 1000+ ürün seed script oluşturma
+- [x] Otomatik psikolojik etiketleme
+- [x] Ürün görselleri (Unsplash URLs)
+- [x] Kategori ve filtreleme sistemi
+- [x] 1162 ürün başarıyla eklendi
+
+## Cimri.com Scraping (Yeni)
+- [ ] Cimri.com scraping script'i oluşturma
+- [ ] Ürün listelerini çekme
+- [ ] Ürün detaylarını parse etme
+- [ ] Görselleri S3'e yükleme
+- [ ] Otomatik psikolojik etiketleme
