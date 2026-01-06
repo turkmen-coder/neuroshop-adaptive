@@ -1,11 +1,25 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { 
+  InsertUser, 
+  users,
+  userPersonalityProfiles,
+  InsertUserPersonalityProfile,
+  behaviorMetrics,
+  InsertBehaviorMetric,
+  products,
+  InsertProduct,
+  productPsychology,
+  InsertProductPsychology,
+  cartItems,
+  InsertCartItem,
+  orders,
+  InsertOrder,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -17,6 +31,8 @@ export async function getDb() {
   }
   return _db;
 }
+
+// ============= USER MANAGEMENT =============
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -85,8 +101,267 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ============= PERSONALITY PROFILE =============
+
+export async function getOrCreatePersonalityProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await db
+    .select()
+    .from(userPersonalityProfiles)
+    .where(eq(userPersonalityProfiles.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0];
+  }
+
+  // Create default profile
+  const newProfile: InsertUserPersonalityProfile = {
+    userId,
+    openness: 50,
+    conscientiousness: 50,
+    extraversion: 50,
+    agreeableness: 50,
+    neuroticism: 50,
+    confidenceScore: 0,
+    consentGiven: false,
+  };
+
+  await db.insert(userPersonalityProfiles).values(newProfile);
+  
+  const created = await db
+    .select()
+    .from(userPersonalityProfiles)
+    .where(eq(userPersonalityProfiles.userId, userId))
+    .limit(1);
+
+  return created[0] || null;
+}
+
+export async function updatePersonalityProfile(userId: number, updates: Partial<InsertUserPersonalityProfile>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(userPersonalityProfiles)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(userPersonalityProfiles.userId, userId));
+
+  return getOrCreatePersonalityProfile(userId);
+}
+
+// ============= BEHAVIOR METRICS =============
+
+export async function saveBehaviorMetrics(metrics: InsertBehaviorMetric) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.insert(behaviorMetrics).values(metrics);
+  return metrics;
+}
+
+export async function getBehaviorMetricsBySession(sessionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(behaviorMetrics)
+    .where(eq(behaviorMetrics.sessionId, sessionId))
+    .orderBy(desc(behaviorMetrics.createdAt));
+}
+
+// ============= PRODUCTS =============
+
+export async function getAllProducts() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(products)
+    .where(eq(products.isActive, true))
+    .orderBy(desc(products.createdAt));
+}
+
+export async function getProductById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function createProduct(product: InsertProduct) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(products).values(product);
+  return result;
+}
+
+export async function updateProduct(id: number, updates: Partial<InsertProduct>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(products)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(products.id, id));
+
+  return getProductById(id);
+}
+
+export async function deleteProduct(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.update(products).set({ isActive: false }).where(eq(products.id, id));
+  return true;
+}
+
+// ============= PRODUCT PSYCHOLOGY =============
+
+export async function getProductPsychology(productId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(productPsychology)
+    .where(eq(productPsychology.productId, productId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function upsertProductPsychology(data: InsertProductPsychology) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .insert(productPsychology)
+    .values(data)
+    .onDuplicateKeyUpdate({
+      set: {
+        appealsToOpenness: data.appealsToOpenness,
+        appealsToConscientiousness: data.appealsToConscientiousness,
+        appealsToExtraversion: data.appealsToExtraversion,
+        appealsToAgreeableness: data.appealsToAgreeableness,
+        appealsToNeuroticism: data.appealsToNeuroticism,
+        mianziScore: data.mianziScore,
+        ubuntuScore: data.ubuntuScore,
+        tags: data.tags,
+        updatedAt: new Date(),
+      },
+    });
+
+  return getProductPsychology(data.productId);
+}
+
+// ============= CART =============
+
+export async function getCartItems(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(cartItems)
+    .where(eq(cartItems.userId, userId))
+    .orderBy(desc(cartItems.createdAt));
+}
+
+export async function addToCart(data: InsertCartItem) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Check if item already exists
+  const existing = await db
+    .select()
+    .from(cartItems)
+    .where(and(eq(cartItems.userId, data.userId), eq(cartItems.productId, data.productId)))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update quantity
+    await db
+      .update(cartItems)
+      .set({ quantity: existing[0].quantity + (data.quantity || 1), updatedAt: new Date() })
+      .where(eq(cartItems.id, existing[0].id));
+    return existing[0];
+  }
+
+  await db.insert(cartItems).values(data);
+  return data;
+}
+
+export async function updateCartItem(id: number, quantity: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(cartItems)
+    .set({ quantity, updatedAt: new Date() })
+    .where(eq(cartItems.id, id));
+
+  return true;
+}
+
+export async function removeFromCart(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(cartItems).where(eq(cartItems.id, id));
+  return true;
+}
+
+export async function clearCart(userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(cartItems).where(eq(cartItems.userId, userId));
+  return true;
+}
+
+// ============= ORDERS =============
+
+export async function createOrder(order: InsertOrder) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(orders).values(order);
+  return result;
+}
+
+export async function getOrdersByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(orders)
+    .where(eq(orders.userId, userId))
+    .orderBy(desc(orders.createdAt));
+}
+
+export async function getOrderById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  return result[0] || null;
+}
