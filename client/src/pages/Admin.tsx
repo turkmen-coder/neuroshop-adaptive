@@ -26,7 +26,8 @@ export default function Admin() {
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [psychologyDialogOpen, setPsychologyDialogOpen] = useState(false);
 
-  const { data: products, isLoading } = trpc.products.list.useQuery();
+  const { data: productsResponse, isLoading } = trpc.products.list.useQuery({ page: 1, limit: 100 });
+  const products = productsResponse?.products || [];
 
   // Psychology scores state
   const [psychScores, setPsychScores] = useState({
@@ -79,10 +80,19 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-8">
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/">
+    <div className="min-h-screen bg-background">        <div className="container py-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <Link href="/admin/analytics">
+                <Button variant="outline" size="sm">
+                  <Brain className="h-4 w-4 mr-2" />
+                  A/B Test Analitikleri
+                </Button>
+              </Link>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between mb-8">        <Link href="/">
             <Button variant="ghost">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Ana Sayfa

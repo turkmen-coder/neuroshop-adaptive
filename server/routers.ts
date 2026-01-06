@@ -63,10 +63,19 @@ export const appRouter = router({
 
   // Products
   products: router({
-    list: publicProcedure.query(async () => {
-      const { getAllProducts } = await import('./db');
-      return getAllProducts();
-    }),
+    list: publicProcedure
+      .input(z.object({ 
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+        category: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { getProductsPaginated } = await import('./db');
+        const page = input?.page || 1;
+        const limit = input?.limit || 20;
+        const category = input?.category;
+        return getProductsPaginated(page, limit, category);
+      }),
     
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
@@ -74,6 +83,11 @@ export const appRouter = router({
         const { getProductById } = await import('./db');
         return getProductById(input.id);
       }),
+    
+    categories: publicProcedure.query(async () => {
+      const { getProductCategories } = await import('./db');
+      return getProductCategories();
+    }),
     
     getPersonalized: protectedProcedure.query(async ({ ctx }) => {
       const { getAllProducts, getProductPsychology, getOrCreatePersonalityProfile } = await import('./db');
@@ -97,6 +111,29 @@ export const appRouter = router({
       // Reorder products based on personality match
       return sortedIds.map(id => products.find(p => p.id === id)!).filter(Boolean);
     }),
+    
+    getRecommendations: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(10) }).optional())
+      .query(async ({ ctx, input }) => {
+        const { getAllProducts, getProductPsychology, getOrCreatePersonalityProfile } = await import('./db');
+        const { getPersonalizedRecommendations } = await import('./recommendations');
+        
+        const products = await getAllProducts();
+        const userProfile = await getOrCreatePersonalityProfile(ctx.user.id);
+        
+        if (!userProfile) return [];
+        
+        // Get psychology data for all products
+        const productsWithPsych = await Promise.all(
+          products.map(async (p) => ({
+            ...p,
+            psychology: await getProductPsychology(p.id),
+          }))
+        );
+        
+        const limit = input?.limit || 10;
+        return getPersonalizedRecommendations(userProfile, productsWithPsych, limit);
+      }),
   }),
 
   // Cart
@@ -110,21 +147,21 @@ export const appRouter = router({
       .input(z.object({ productId: z.number(), quantity: z.number().default(1) }))
       .mutation(async ({ ctx, input }) => {
         const { addToCart } = await import('./db');
-        return addToCart({ userId: ctx.user.id, ...input });
+        return addToCart(ctx.user.id, input.productId, input.quantity);
       }),
     
     update: protectedProcedure
-      .input(z.object({ id: z.number(), quantity: z.number() }))
-      .mutation(async ({ input }) => {
+      .input(z.object({ productId: z.number(), quantity: z.number() }))
+      .mutation(async ({ ctx, input }) => {
         const { updateCartItem } = await import('./db');
-        return updateCartItem(input.id, input.quantity);
+        return updateCartItem(ctx.user.id, input.productId, input.quantity);
       }),
     
     remove: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .input(z.object({ productId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
         const { removeFromCart } = await import('./db');
-        return removeFromCart(input.id);
+        return removeFromCart(ctx.user.id, input.productId);
       }),
     
     clear: protectedProcedure.mutation(async ({ ctx }) => {
@@ -133,8 +170,26 @@ export const appRouter = router({
     }),
   }),
 
-  // Admin - Products
+  // Admin - Products & Analytics
   admin: router({
+    // A/B Test Analytics
+    getThemePerformance: protectedProcedure
+      .input(z.object({ days: z.number().min(1).max(365).default(30) }).optional())
+      .query(async ({ input }) => {
+        const { getThemePerformanceMetrics } = await import('./ab-test-analytics');
+        const days = input?.days || 30;
+        return getThemePerformanceMetrics(days);
+      }),
+    
+    getPersonalityThemeBreakdown: protectedProcedure
+      .input(z.object({ days: z.number().min(1).max(365).default(30) }).optional())
+      .query(async ({ input }) => {
+        const { getPersonalityThemeBreakdown } = await import('./ab-test-analytics');
+        const days = input?.days || 30;
+        return getPersonalityThemeBreakdown(days);
+      }),
+    
+    // Product Management
     createProduct: protectedProcedure
       .input(z.object({
         name: z.string(),

@@ -65,13 +65,13 @@ export default function Cart() {
     }
   }, [cartItems]);
 
-  const handleUpdateQuantity = (id: number, quantity: number) => {
+  const handleUpdateQuantity = (productId: number, quantity: number) => {
     if (quantity < 1) return;
-    updateMutation.mutate({ id, quantity });
+    updateMutation.mutate({ productId, quantity });
   };
 
-  const handleRemove = (id: number) => {
-    removeMutation.mutate({ id });
+  const handleRemove = (productId: number) => {
+    removeMutation.mutate({ productId });
   };
 
   const handleClearCart = () => {

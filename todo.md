@@ -104,3 +104,33 @@
 - [ ] Ürün detaylarını parse etme
 - [ ] Görselleri S3'e yükleme
 - [ ] Otomatik psikolojik etiketleme
+
+## Gerçek Zamanlı Öneri Sistemi (Yeni)
+- [x] Kişilik bazlı ürün öneri algoritması
+- [x] "Size Özel Öneriler" bölümü ana sayfada
+- [x] Uyumluluk skoru hesaplama ve sıralama
+- [x] Öneri açıklamaları (neden önerildi)
+
+## A/B Test Dashboard (Yeni)
+- [x] Tema varyasyonları tracking sistemi
+- [x] Dönüşüm oranı metrikleri (conversion tracking)
+- [x] Kişilik tipi bazlı analitik
+- [x] Admin dashboard görselleştirme (charts)
+- [x] Tema performans karşılaştırma
+
+## Stripe Ödeme Entegrasyonu (Yeni)
+- [ ] Stripe feature ekleme (webdev_add_feature)
+- [ ] Checkout sayfası tasarımı
+- [ ] Ödeme işleme ve webhook'lar
+- [ ] Sipariş takip sistemi
+- [ ] Ödeme geçmişi sayfası
+
+## Ürün Kategorilendirme (Yeni)
+- [x] Mevcut ürünleri kategorilere ayırma
+- [x] Kategori filtreleme UI
+- [x] Kategori bazlı sayfalama
+
+## Performans Optimizasyonu (ACİL)
+- [x] Ürün listesi sayfalama (pagination)
+- [x] Database query optimizasyonu (LIMIT, OFFSET)
+- [x] Frontend caching stratejisi

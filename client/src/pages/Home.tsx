@@ -10,17 +10,28 @@ import { Link } from "wouter";
 import { useBehaviorTracking } from "@/hooks/useBehaviorTracking";
 import { useAdaptiveTheme } from "@/hooks/useAdaptiveTheme";
 import { useState } from "react";
+import RecommendationsSection from "@/components/RecommendationsSection";
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const { addSearchTerm } = useBehaviorTracking();
   const { themeName } = useAdaptiveTheme();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // Get categories
+  const { data: categories } = trpc.products.categories.useQuery();
+  
   // Get personalized products if logged in, otherwise get all products
-  const { data: products, isLoading } = isAuthenticated
+  const { data: productsResponse, isLoading } = isAuthenticated
     ? trpc.products.getPersonalized.useQuery()
-    : trpc.products.list.useQuery();
+    : trpc.products.list.useQuery({ page: currentPage, limit: 20, category: selectedCategory });
+  
+  // Extract products array from response
+  const products = Array.isArray(productsResponse) 
+    ? productsResponse 
+    : productsResponse?.products || [];
 
   const { data: cart } = trpc.cart.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -138,9 +149,49 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Recommendations Section - Only for authenticated users */}
+      {isAuthenticated && (
+        <section className="py-12 bg-muted/30">
+          <div className="container">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold">Size Özel Öneriler</h2>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Kişiliğinize göre seçildi
+                </p>
+              </div>
+            </div>
+            <RecommendationsSection />
+          </div>
+        </section>
+      )}
+
       {/* Products Grid */}
       <section className="py-12">
         <div className="container">
+          {/* Category Filter */}
+          {categories && categories.length > 0 && (
+            <div className="mb-8">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedCategory === undefined ? "default" : "outline"}
+                  onClick={() => { setSelectedCategory(undefined); setCurrentPage(1); }}
+                >
+                  Tümü
+                </Button>
+                {categories.map((category) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    onClick={() => { setSelectedCategory(category); setCurrentPage(1); }}
+                  >
+                    {category}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold">
               {isAuthenticated ? "Size Özel Ürünler" : "Ürünler"}
@@ -163,7 +214,7 @@ export default function Home() {
                 </Card>
               ))}
             </div>
-          ) : products && products.length > 0 ? (
+          ) : products.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
                 <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
