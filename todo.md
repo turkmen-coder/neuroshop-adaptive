@@ -134,3 +134,10 @@
 - [x] Ürün listesi sayfalama (pagination)
 - [x] Database query optimizasyonu (LIMIT, OFFSET)
 - [x] Frontend caching stratejisi
+
+## Dokümantasyon (Yeni)
+- [x] README.md dosyası oluşturma
+- [x] Proje mimarisi açıklaması
+- [x] Kurulum talimatları
+- [x] API dokümantasyonu
+- [x] Katkıda bulunma rehberi
