@@ -1,3 +1,4 @@
+<img width="2752" height="1536" alt="image" src="https://github.com/user-attachments/assets/cf274625-494f-47e7-89bc-13c794bb0d34" />
 # NeuroShop - Psiko-Adaptif E-Ticaret Platformu
 
 **NeuroShop**, kullanıcıların kişilik özelliklerine göre gerçek zamanlı olarak arayüzü değiştiren, etik ve kültürel açıdan duyarlı bir e-ticaret platformudur. Big Five kişilik modeline dayalı davranış analizi ile her kullanıcıya özel bir alışveriş deneyimi sunar.
